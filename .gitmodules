@@ -1,0 +1,3 @@
+[submodule "tests/CynTestMkr"]
+	path = tests/CynTestMkr
+	url = https://github.com/h2see/CynTestMkr.git

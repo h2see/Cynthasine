@@ -1,0 +1,73 @@
+NOTICE:
+
+This NOTICE document, including all of its contents, must be retained in the root directory of any
+distribution or derivative of Cynthasine © 2024. Failure to include this file does not exempt you
+from the terms of the licenses governing this project.
+
+https://github.com/h2see reserves the right to modify or update this NOTICE document in future versions
+of the software. Such modifications will apply only to future versions of the software distributed
+after the date of modification. Users and distributors of prior versions are under no obligation to
+incorporate any subsequent changes to this NOTICE file into earlier versions of the software they
+possess or distribute.
+
+
+
+Except where otherwise noted, Cynthasine © 2024 by https://github.com/h2see is licensed under Creative
+Commons Attribution-NonCommercial-ShareAlike 4.0 International. To view a
+copy of this license, visit https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+A copy of this license is included in this distribution within the file named LICENSE.
+This LICENSE file must be maintained in the root directory of any distribution or derivative of
+Cynthasine © 2024. Failure to include the LICENSE file does not exempt you from the terms of the
+license. If the LICENSE file is missing, it is your responsibility to obtain a copy by visiting
+https://creativecommons.org/licenses/by-nc-sa/4.0/.
+
+
+
+The following documents are not licensed under the Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International license.
+Instead, they are licensed under the Mozilla Public License, v. 2.0:
+
+"include/CynWave/CynGlobals.h"  ,
+"include/CynWave/CynUtils.h"    ,
+"include/CynWave/CynEigen.h"    ,
+"src/CynWave/CynUtils.hpp"      , and
+"src/CynWave/CynEigenAddon.hpp" .
+
+A copy of this license is included in this distribution within the LICENSE-MPL-2.0 file and must be
+maintained in the root directory of any distribution or derivative of Cynthasine © 2024. Failure to
+include the LICENSE-MPL-2.0 file does not exempt you from the terms of the license. If this file is
+missing, you must obtain a copy from https://mozilla.org/MPL/2.0/.
+The Mozilla Public License, v. 2.0 cannot be applied or construed to apply to any other files in
+Cynthasine © 2024.
+
+
+
+The submodule "tests/CynTestMkr" is not licensed under the Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International license.
+Instead, it is licensed under the MIT License as specified following this paragraph. A copy of the
+MIT License can also be found in the LICENSE-MIT file, if included in the distribution.
+The MIT License cannot be applied or construed to apply to any other files in
+Cynthasine © 2024.
+
+MIT License
+
+Copyright (c) 2024 https://github.com/h2see
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
