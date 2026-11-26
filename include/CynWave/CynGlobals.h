@@ -16,6 +16,10 @@ namespace Cyn {
 	// Intitially set to: 1e-3
 	double DEFAULT_TOLERANCE = 1e-3;
 
+	// Pointwise relative truncation error for wave-to-wave division.
+	inline constexpr long double WAVE_DIVISION_TOLERANCE = 1e-3L;
+	static_assert(WAVE_DIVISION_TOLERANCE > 0 && WAVE_DIVISION_TOLERANCE < 1);
+
 	template <typename T>
 	concept NumA = std::is_arithmetic_v<T>;
 

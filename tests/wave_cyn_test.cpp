@@ -120,3 +120,38 @@ TEST_F(WaveTest, Sub_0_1) { compare_wave_result_with_truth_signal(random_waves[0
 TEST_F(WaveTest, Sub_1_0) { compare_wave_result_with_truth_signal(random_waves[1] - random_waves[0], "Sub_1_0.csv"); }
 TEST_F(WaveTest, Mul_0_1) { compare_wave_result_with_truth_signal(random_waves[0] * random_waves[1], "Mul_0_1.csv"); }
 TEST_F(WaveTest, Mul_1_0) { compare_wave_result_with_truth_signal(random_waves[1] * random_waves[0], "Mul_1_0.csv"); }
+
+TEST(WaveDivisionTest, ConstantDivisor) {
+    const Wave numerator = Wave::sine(3.0f, 2.0f, 0.7f) + Wave::cosine(4.0f, 0.5f);
+    const Wave divisor = Wave::one() * -2.0f;
+    static_assert(std::is_same_v<decltype(numerator / divisor), Wave>);
+
+    const Wave quotient = numerator / divisor;
+    EXPECT_TRUE(quotient.isApprox(numerator / -2.0f, 0.0f));
+}
+
+TEST(WaveDivisionTest, MergesDivisorComponentsAndMeetsTolerance) {
+    const WaveD numerator = 1.0 + WaveD::sine(-5.0, 0.2, 0.3);
+    const WaveD divisor = 1.7 + WaveD::cosine(2.0) + WaveD::sine(2.0);
+
+    const WaveD quotient = numerator / divisor;
+    for (const double time : {-0.37, 0.0, 0.03125, 0.375, 1.371, 50.26}) {
+        const double expected = numerator.sample(time) / divisor.sample(time);
+        EXPECT_NEAR(quotient.sample(time), expected, WAVE_DIVISION_TOLERANCE * std::abs(expected)) << time;
+    }
+}
+
+TEST(WaveDivisionTest, RejectsDivisorsWithBoundsThatIncludeZero) {
+    EXPECT_THROW(Wave::one() / Wave::zero(), std::domain_error);
+    EXPECT_THROW(Wave::one() / Wave::sine(1.0f), std::domain_error);
+    EXPECT_THROW(Wave::one() / (1.0f + Wave::cosine(1.0f)), std::domain_error);
+}
+
+TEST(WaveDivisionTest, CompoundAssignmentCanAliasDivisor) {
+    WaveD quotient = 1.0 + WaveD::cosine(1.0, 0.25);
+    quotient /= quotient;
+
+    for (const double time : {-0.2, 0.0, 0.5, 1.3}) {
+        EXPECT_NEAR(quotient.sample(time), 1.0, WAVE_DIVISION_TOLERANCE) << time;
+    }
+}

@@ -7,6 +7,14 @@
 #ifndef CYN_WAVE_HPP
 #define CYN_WAVE_HPP
 
+#include <cmath>
+#include <complex>
+#include <cstddef>
+#include <iterator>
+#include <limits>
+#include <map>
+#include <stdexcept>
+
 #include "CynEigenUtils.h"
 
 namespace Cyn {
@@ -595,6 +603,148 @@ namespace Cyn {
 	template<NumF WaveT, NumA T>
 	inline WaveArray<WaveT> operator/(WaveArray<WaveT> lhs, T rhs) {
 		lhs /= rhs;
+		return lhs;
+	}
+
+	namespace impl {
+
+		using DivisionReal = long double;
+		using DivisionCoefficient = std::complex<DivisionReal>;
+		using DivisionSpectrum = std::map<DivisionReal, DivisionCoefficient>;
+
+		template<NumF WaveT>
+		DivisionSpectrum division_spectrum(const WaveArray<WaveT>& wave) {
+			DivisionSpectrum spectrum;
+			for (Eigen::Index i = 0; i < wave.num_waves(); ++i) {
+				const DivisionReal frequency = wave(i, 0);
+				const DivisionReal amplitude = wave(i, 1);
+				const DivisionReal phase = wave(i, 2);
+				if (frequency == 0) {
+					spectrum[0] -= amplitude * std::sin(phase);
+				}
+				else {
+					// Encode a sine as conjugate coefficients at f and -f.
+					const DivisionCoefficient coefficient(
+						-amplitude / 2 * std::sin(phase), -amplitude / 2 * std::cos(phase));
+					spectrum[frequency] += coefficient;
+					spectrum[-frequency] += std::conj(coefficient);
+				}
+			}
+			std::erase_if(spectrum, [](const auto& term) { return term.second == DivisionCoefficient{}; });
+			return spectrum;
+		}
+
+		inline DivisionSpectrum convolve_division_spectra(
+			const DivisionSpectrum& lhs, const DivisionSpectrum& rhs, std::size_t& remaining_products) {
+			if (!lhs.empty() && rhs.size() > remaining_products / lhs.size()) {
+				throw std::length_error("Wave division exceeded the spectral work limit while approximating the quotient.");
+			}
+			remaining_products -= lhs.size() * rhs.size();
+
+			DivisionSpectrum product;
+			for (const auto& [lhs_freq, lhs_coefficient] : lhs) {
+				for (const auto& [rhs_freq, rhs_coefficient] : rhs) {
+					const DivisionReal frequency = lhs_freq + rhs_freq;
+					if (!std::isfinite(frequency)) {
+						throw std::overflow_error("Wave division produced a frequency outside the representable range.");
+					}
+					product[frequency] += lhs_coefficient * rhs_coefficient;
+				}
+			}
+			std::erase_if(product, [](const auto& term) { return term.second == DivisionCoefficient{}; });
+			return product;
+		}
+
+		template<NumF WaveT>
+		WaveT division_parameter(DivisionReal value) {
+			if (!std::isfinite(value) || std::abs(value) > std::numeric_limits<WaveT>::max()) {
+				throw std::overflow_error("Wave division produced a parameter outside the representable range.");
+			}
+			return static_cast<WaveT>(value);
+		}
+
+		template<NumF WaveT>
+		WaveArray<WaveT> wave_from_division_spectrum(const DivisionSpectrum& spectrum) {
+			const auto first = spectrum.lower_bound(0);
+			if (first == spectrum.end()) {
+				return WaveArray<WaveT>::zero();
+			}
+
+			WaveArray<WaveT> result(static_cast<Eigen::Index>(std::distance(first, spectrum.end())), 3);
+			Eigen::Index row = 0;
+			for (auto term = first; term != spectrum.end(); ++term, ++row) {
+				const auto& [frequency, coefficient] = *term;
+				if (frequency == 0) {
+					result.wave(row) << WaveT{0}, division_parameter<WaveT>(coefficient.real()), pi<WaveT>(1.5L);
+				}
+				else {
+					result.wave(row) << division_parameter<WaveT>(frequency),
+						division_parameter<WaveT>(2 * std::abs(coefficient)),
+						static_cast<WaveT>(-std::arg(coefficient) - pi<DivisionReal>(0.5L));
+				}
+			}
+			return result;
+		}
+
+	} // namespace impl
+
+	// Approximate the pointwise quotient using a reciprocal series in the frequency domain.
+	// The divisor's DC magnitude must exceed the sum of its merged oscillating amplitudes.
+	template<NumF WaveT>
+	WaveArray<WaveT> operator/(const WaveArray<WaveT>& lhs, const WaveArray<WaveT>& rhs) {
+		if (!lhs.allFinite() || !rhs.allFinite()) {
+			throw std::invalid_argument("Wave division requires finite wave parameters.");
+		}
+
+		auto residual = impl::division_spectrum(rhs);
+		const impl::DivisionReal center = residual[0].real();
+		residual.erase(0);
+		impl::DivisionReal radius = 0;
+		for (const auto& term : residual) {
+			radius += std::abs(term.second);
+		}
+		if (!std::isfinite(center) || !std::isfinite(radius)) {
+			throw std::overflow_error("Wave division could not represent the divisor's spectral bounds.");
+		}
+		if (std::abs(center) <= radius) {
+			throw std::domain_error("Wave division requires spectral bounds that keep the divisor away from zero.");
+		}
+
+		const impl::DivisionReal ratio = radius / std::abs(center);
+		if (ratio <= WAVE_DIVISION_TOLERANCE) {
+			WaveArray<WaveT> quotient = lhs;
+			for (Eigen::Index i = 0; i < quotient.num_waves(); ++i) {
+				quotient(i, 1) = impl::division_parameter<WaveT>(quotient(i, 1) / center);
+			}
+			return quotient;
+		}
+
+		auto numerator = impl::division_spectrum(lhs);
+		if (numerator.empty()) {
+			return WaveArray<WaveT>::zero();
+		}
+		for (auto& term : numerator) {
+			term.second /= center;
+		}
+		for (auto& term : residual) {
+			term.second /= -center;
+		}
+
+		// For r = 1 - rhs / center, the degree-n relative remainder is bounded by |r|^(n + 1).
+		// Limit the convolution work as the number of distinct frequencies can grow rapidly.
+		std::size_t remaining_products = 4'000'000;
+		impl::DivisionSpectrum polynomial{{0, 1}};
+		for (auto error_bound = ratio; error_bound > WAVE_DIVISION_TOLERANCE; error_bound *= ratio) {
+			polynomial = impl::convolve_division_spectra(polynomial, residual, remaining_products);
+			polynomial[0] += 1;
+		}
+		return impl::wave_from_division_spectrum<WaveT>(
+			impl::convolve_division_spectra(numerator, polynomial, remaining_products));
+	}
+
+	template<NumF WaveT>
+	inline WaveArray<WaveT>& operator/=(WaveArray<WaveT>& lhs, const WaveArray<WaveT>& rhs) {
+		lhs = lhs / rhs;
 		return lhs;
 	}
 
